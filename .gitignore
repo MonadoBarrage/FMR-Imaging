@@ -1,0 +1,7 @@
+*.laz
+*.las
+*.ply
+*.pcd
+*.pcl
+userdata/*
+data/*
