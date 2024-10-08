@@ -1,10 +1,5 @@
-*.laz
-*.las
-*.ply
-*.pcd
-*.pcl
 userdata/*
 data/output/*
 datas/
-__pycache__
+__pycache__/
 test_code/
