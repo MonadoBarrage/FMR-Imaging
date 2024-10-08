@@ -15,13 +15,12 @@ from model import PointNet, Decoder, SolveRegistration
 import se_math.transforms as transforms
 from datetime import datetime
 
-
-save_file = "/data/ouput/"
-
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir)))
+
+output_dir = "./data/output/"
 
 # visualize the point clouds
 def draw_registration_result(source, target, transformation, time_str):
@@ -29,13 +28,13 @@ def draw_registration_result(source, target, transformation, time_str):
     target_temp = copy.deepcopy(target)
     source_temp.paint_uniform_color([1, 0.706, 0])
     target_temp.paint_uniform_color([0, 0.651, 0.929])
-    open3d.io.write_point_cloud("./data/output/source_pre.ply", source_temp)
+    open3d.io.write_point_cloud(f"{output_dir}/source_pre.ply", source_temp)
 
     print("Visualizing point clouds BEFORE FMR.....")
     open3d.visualization.draw_geometries([source_temp, target_temp])
     source_temp.transform(transformation)
-    open3d.io.write_point_cloud("./data/output/source.ply", source_temp)
-    open3d.io.write_point_cloud("./data/output/target.ply", target_temp)
+    open3d.io.write_point_cloud(f"{output_dir}/source.ply", source_temp)
+    open3d.io.write_point_cloud(f"{output_dir}/target.ply", target_temp)
 
     
     first_cloud = time_str + "_source.ply"
@@ -52,8 +51,8 @@ def draw_registration_result(source, target, transformation, time_str):
         
             i = i + 1
 
-    open3d.io.write_point_cloud("./data/output/source.ply", source_temp)
-    open3d.io.write_point_cloud("./data/output/target.ply", target_temp)
+    open3d.io.write_point_cloud(f"{output_dir}/source.ply", source_temp)
+    open3d.io.write_point_cloud(f"{output_dir}/target.ply", target_temp)
 
     open3d.io.write_point_cloud(first_cloud, source_temp)
     open3d.io.write_point_cloud(second_cloud, target_temp)
@@ -108,7 +107,8 @@ if __name__ == '__main__':
 
     if ( len(sys.argv) == 2 and sys.argv[1] == "-h"):
         print("demo.py")
-        print("1. demo.py ->")
+        print("FMR algorithm is used to match 3D point clouds together and \n")
+        print("1. demo.py -> Uses sample point cloud files from data/sample")
         print("2. demo.py {-p} {}")
         print("3. demo.py {-p} {} {}")
         print("4. demo.py {-i} {} {}")
@@ -116,10 +116,10 @@ if __name__ == '__main__':
         print("6. demo.py {-r}")
         exit()
 
-    if not os.path.exists("data/output/"): 
-        os.makedirs("data/output/") 
+    if not os.path.exists(f"{output_dir}/"): 
+        os.makedirs(f"{output_dir}/") 
 
-    now_time_str = "./data/output/" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    now_time_str = f"{output_dir}/" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
 
@@ -128,20 +128,20 @@ if __name__ == '__main__':
         case 1:
             #Uses default files 
             print("Using default source files.....") 
-            path0 = "./data/src0.ply"
-            path1 = "./data/src1.ply"
+            path0 = "./data/sample/src0.ply"
+            path1 = "./data/sample/src1.ply"
             if (not os.path.exists(path0)):
-                print("ERROR! src0.ply does not exist in data folder. Exiting program.....")
+                print("ERROR! src0.ply does not exist in data/sample folder. Exiting program.....")
                 exit()
             elif (not os.path.exists(path1)):
-                print("ERROR! src1.ply does not exist in data folder. Exiting program.....")
+                print("ERROR! src1.ply does not exist in data/sample folder. Exiting program.....")
                 exit()
         case 2:
             #Uses ply files made in the last run of this program
             if(sys.argv[1] == "-r"):
                 print("Using previously generated point cloud files.....")
-                path0 = "./data/output/source.ply"
-                path1 = "./data/output/target.ply"
+                path0 = f"{output_dir}/source.ply"
+                path1 = f"{output_dir}/target.ply"
                 if (not os.path.exists(path0)):
                     print("ERROR! source.ply does not exist in data/output folder. Exiting program.....")
                     exit()
