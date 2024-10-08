@@ -4,4 +4,7 @@
 *.pcd
 *.pcl
 userdata/*
-data/*
+data/output/*
+datas/
+__pycache__/
+test_code/
