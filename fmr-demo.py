@@ -1,7 +1,8 @@
 """
-Demo the feature-metric registration algorithm
 Creator: Xiaoshui Huang
-Date: 2021-04-13
+
+Author: MonadoBarrage
+Date: 2024-180-0
 """
 import os
 import sys
@@ -106,14 +107,14 @@ def main(p0, p1, p0_pcd, p1_pcd, time_str):
 if __name__ == '__main__':
 
     if ( len(sys.argv) == 2 and sys.argv[1] == "-h"):
-        print("demo.py")
+        print("fmr-demo.py")
         print("FMR algorithm is used to match 3D point clouds together and \n")
-        print("1. demo.py -> Uses sample point cloud files from data/sample")
-        print("2. demo.py {-p} {}")
-        print("3. demo.py {-p} {} {}")
-        print("4. demo.py {-i} {} {}")
-        print("5. demo.py {-i} {} {} {} {}")
-        print("6. demo.py {-r}")
+        print("1. fmr-demo.py: Uses sample point cloud files from data/sample.\n")
+        print("2. fmr-demo.py -p {path to point cloud}: Uses provided point cloud and creates another point cloud based on the passed point cloud.\n")
+        print("3. fmr-demo.py -p {path to 1st point cloud} {path to 2nd point cloud}: Uses two provided point clouds.\n")
+        print("4. fmr-demo.py -i {path to color image} {path to depth image}: Uses provided image files to create two point clouds.\n")
+        print("5. fmr-demo.py -i {path to 1st color image} {path to 1st depth image} {path to 2nd color image} {path to 2nd depth image}: Uses provided image files to create two seperate point clouds.\n")
+        print("6. fmr-demo.py -r: Uses files ")
         exit()
 
     if not os.path.exists(f"{output_dir}/"): 
@@ -143,10 +144,10 @@ if __name__ == '__main__':
                 path0 = f"{output_dir}/source.ply"
                 path1 = f"{output_dir}/target.ply"
                 if (not os.path.exists(path0)):
-                    print("ERROR! source.ply does not exist in data/output folder. Exiting program.....")
+                    print(f"ERROR! source.ply does not exist in {output_dir} folder. Exiting program.....")
                     exit()
                 elif (not os.path.exists(path1)):
-                    print("ERROR! target.ply does not exist in data/output folder. Exiting program.....")
+                    print(f"ERROR! target.ply does not exist in {output_dir} folder. Exiting program.....")
                     exit()
             
             else:
