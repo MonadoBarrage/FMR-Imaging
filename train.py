@@ -14,7 +14,7 @@ import logging
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
-# os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ["CUDA_VISIBLE_DEVICES"] = torch.cuda.device_count()
 
 
 def parameters(argv=None):
