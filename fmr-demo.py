@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Creator: Xiaoshui Huang
 
@@ -12,9 +13,11 @@ import torch
 import torch.utils.data
 import logging
 import numpy as np
+import json
 from model import PointNet, Decoder, SolveRegistration
 import se_math.transforms as transforms
 from datetime import datetime
+import time
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
@@ -32,7 +35,7 @@ def draw_registration_result(source, target, transformation, time_str):
     open3d.io.write_point_cloud(f"{output_dir}/source_pre.ply", source_temp)
 
     print("Visualizing point clouds BEFORE FMR.....")
-    open3d.visualization.draw_geometries([source_temp, target_temp])
+    open3d.visualization.draw_geometries([source_temp, target_temp], "Before FMR")
     source_temp.transform(transformation)
     open3d.io.write_point_cloud(f"{output_dir}/source.ply", source_temp)
     open3d.io.write_point_cloud(f"{output_dir}/target.ply", target_temp)
@@ -43,7 +46,7 @@ def draw_registration_result(source, target, transformation, time_str):
 
     if (os.path.exists(first_cloud) or os.path.exists(second_cloud)):
         i = 1
-        while (true):
+        while (True):
             first_cloud = time_str + "_source_" + i + ".ply"
             second_cloud = time_str + "_target_" + i + ".ply"
 
@@ -59,7 +62,7 @@ def draw_registration_result(source, target, transformation, time_str):
     open3d.io.write_point_cloud(second_cloud, target_temp)
 
     print("Visualizing point clouds AFTER FMR.....")
-    open3d.visualization.draw_geometries([source_temp, target_temp])
+    open3d.visualization.draw_geometries([source_temp, target_temp], "After FMR")
     
 
     # image = open3d.visualization.Visualizer.capture_screen_float_buffer(source_temp, do_render=False)
@@ -93,6 +96,7 @@ class Demo:
             return g_hat
 
 def main(p0, p1, p0_pcd, p1_pcd, time_str):
+    t0 = datetime.now()
     fmr = Demo()
     model = fmr.create_model()
     pretrained_path = "./result/fmr_model_modelnet40.pth"
@@ -101,11 +105,12 @@ def main(p0, p1, p0_pcd, p1_pcd, time_str):
     device = "cpu"
     model.to(device)
     T_est = fmr.evaluate(model, p0, p1, device)
+    t1 = datetime.now()
 
+    print(f"{((t1-t0).microseconds)} microseconds")
     draw_registration_result(p1_pcd, p0_pcd, T_est, time_str)
 
 if __name__ == '__main__':
-
     if ( len(sys.argv) == 2 and sys.argv[1] == "-h"):
         print("fmr-demo.py")
         print("FMR algorithm is used to match 3D point clouds together and \n")
@@ -114,7 +119,7 @@ if __name__ == '__main__':
         print("3. fmr-demo.py -p {path to 1st point cloud} {path to 2nd point cloud}: Uses two provided point clouds.\n")
         print("4. fmr-demo.py -i {path to color image} {path to depth image}: Uses provided image files to create two point clouds.\n")
         print("5. fmr-demo.py -i {path to 1st color image} {path to 1st depth image} {path to 2nd color image} {path to 2nd depth image}: Uses provided image files to create two seperate point clouds.\n")
-        print("6. fmr-demo.py -r: Uses files ")
+        print("6. fmr-demo.py -r: Uses files from previous run and use FMR on those point clouds")
         exit()
 
     if not os.path.exists(f"{output_dir}/"): 
@@ -122,7 +127,26 @@ if __name__ == '__main__':
 
     now_time_str = f"{output_dir}/" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
+    if not os.path.exists("config.json"):
+        print("config.json missing. Creating config.json with default values.....")
+        with open('config.json', 'w', encoding='utf-8') as config_file:
+            config_settings = {
+                "rotation":
+                {
+                    "x-axis": 40,
+                    "y-axis": 40,
+                    "z-axis": 40
+                },
 
+                "translation":
+                {
+                    "x-cord": 50, 
+                    "y-cord": 50, 
+                    "z-cord": 50
+                }
+            }
+            json.dump(config_settings, config_file, ensure_ascii=False, indent=4)
+            print("Created config.json in root directory.\n")
 
     match len(sys.argv):
         
@@ -158,7 +182,14 @@ if __name__ == '__main__':
 
             #Takes in one point cloud specified by user. Creates another point cloud by transforming the previous cloud.
             if sys.argv[1] == "-p":
+                
                 print("Using provided point cloud and creating another point cloud.....")
+                
+                print("Opening config.json.....")
+                with open('config.json',"r") as config_file:
+                    config_data = json.load(config_file)
+                print("Successfully read config.json")
+
                 path0 = sys.argv[2]
                 if (not os.path.exists(path0)):
                     print(f"ERROR! {path0} does not exist.. Exiting program.....")
@@ -172,7 +203,10 @@ if __name__ == '__main__':
                         i = i + 1
 
                 pcd2 = open3d.io.read_point_cloud(path0)
-                pcd2.translate((1.2,0,0),True)
+                pcd2.translate((config_data["translation"]["x-cord"], config_data["translation"]["y-cord"], config_data["translation"]["z-cord"]),True)
+
+                R = pcd2.get_rotation_matrix_from_xyz((config_data["rotation"]["x-axis"], config_data["rotation"]["y-axis"], config_data["rotation"]["z-axis"]))
+                pcd2.rotate(R,pcd2.get_center())
 
                 open3d.io.write_point_cloud(path1, pcd2)
                 print(f"Created {path1} .")
@@ -196,6 +230,12 @@ if __name__ == '__main__':
 
             #Uses rgbd data given by user and creates one point cloud with it. Creates another point cloud by transforming the first cloud
             elif sys.argv[1] == "-i":
+                print("Opening config.json.....")
+                with open('config.json',"r") as config_file:
+                    config_data = json.load(config_file)
+                print("Successfully read config.json")
+
+                
                 print("Using provided image data to make one point cloud and transforming created point cloud to get another.....")
                 if (not os.path.exists(sys.argv[2])):
                     print(f"ERROR! {sys.argv[2]} does not exist.. Exiting program.....")
@@ -228,7 +268,10 @@ if __name__ == '__main__':
 
 
                 pcd2 = open3d.io.read_point_cloud(path0)            
-                pcd2.translate((1.2,5,5),True)
+                
+                pcd2.translate((config_data["translation"]["x-cord"], config_data["translation"]["y-cord"], config_data["translation"]["z-cord"]),True)
+                R = pcd2.get_rotation_matrix_from_xyz((config_data["rotation"]["x-axis"], config_data["rotation"]["y-axis"], config_data["rotation"]["z-axis"]))
+                pcd2.rotate(R,pcd2.get_center())
 
                 open3d.io.write_point_cloud(path1, pcd2)
                 print(f"Created {path1} .")
@@ -272,11 +315,12 @@ if __name__ == '__main__':
                 rgbd_image1 = open3d.geometry.RGBDImage.create_from_color_and_depth(color_raw1, depth_raw1)
                 pcd1 = open3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image1,open3d.camera.PinholeCameraIntrinsic(open3d.camera.PinholeCameraIntrinsicParameters.PrimeSenseDefault))
                 
+                color_raw2 = open3d.io.read_image(sys.argv[4])
+                depth_raw2 = open3d.io.read_image(sys.argv[5])
+                rgbd_image2 = open3d.geometry.RGBDImage.create_from_color_and_depth(color_raw2, depth_raw2)
+                pcd2 = open3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image2,open3d.camera.PinholeCameraIntrinsic(open3d.camera.PinholeCameraIntrinsicParameters.PrimeSenseDefault))
 
-                pcd2 = pcd1              
-                pcd2.translate((1.2,0,0),True)
-                # R = pcd2.get_rotation_matrix_from_xyz((np.pi / 2, 0, np.pi / 4))
-                # pcd2.rotate(R,pcd2.get_center())
+
                 
                 open3d.io.write_point_cloud(path0, pcd1)
                 print(f"Created {path0} .")

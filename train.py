@@ -94,7 +94,7 @@ def run(args, trainset, testset, action):
     checkpoint = None
     if args.resume:
         assert os.path.isfile(args.resume)
-        checkpoint = torch.load(args.resume)
+        checkpoint = torch.load(args.resume,map_location=torch.device('cpu'))
         args.start_epoch = checkpoint['epoch']
         model.load_state_dict(checkpoint['model'])
 
