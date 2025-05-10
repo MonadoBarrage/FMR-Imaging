@@ -5,3 +5,4 @@ __pycache__
 test_code/
 config.json
 .idea/
+python-env/
