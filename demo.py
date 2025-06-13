@@ -47,7 +47,7 @@ subgroup.add_argument('--p2', nargs='+',help="")
 subgroup.add_argument('--copy', action='store_true',help="")
 
 main_group.add_argument("--r", action='store_true', help="")
-
+parser.add_argument("--no-display", action='store_true', help="")
 
 args = parser.parse_args()
 
@@ -102,6 +102,8 @@ def handle_args():
     pcd1: open3d.cpu.pybind.geometry.PointCloud = None
     pcd2: open3d.cpu.pybind.geometry.PointCloud = None
 
+    isDisplay = not args.no_display
+
     if args.p1:
         match len(args.p1):
             case 2:
@@ -147,13 +149,14 @@ def handle_args():
         pcd1 = open3d.io.read_point_cloud(pcd1_path)
         pcd2 = open3d.io.read_point_cloud(pcd2_path)
 
-    return pcd1, pcd2
+    return pcd1, pcd2, isDisplay
 
-def draw_registration_result(source, target, transformation):
+def draw_registration_result(source, target, transformation, isDisplay):
     """ Visualize the point clouds """
 
     # pylint: disable=no-member
-    vis = open3d.visualization.Visualizer()
+    if isDisplay:
+        vis = open3d.visualization.Visualizer()
 
 
     source_temp = copy.deepcopy(source)
@@ -163,11 +166,12 @@ def draw_registration_result(source, target, transformation):
     target_temp.paint_uniform_color([0, 0.651, 0.929])
     # open3d.io.write_point_cloud("source_pre.ply", source_temp)
     # open3d.visualization.draw([source_temp, target_temp])
-    vis.create_window()
-    vis.add_geometry(source_temp)
-    vis.add_geometry(target_temp)
-    vis.run()
-    vis.destroy_window()
+    if isDisplay:
+        vis.create_window()
+        vis.add_geometry(source_temp)
+        vis.add_geometry(target_temp)
+        vis.run()
+        vis.destroy_window()
     
     
     source_temp.transform(transformation)
@@ -176,11 +180,12 @@ def draw_registration_result(source, target, transformation):
     open3d.io.write_point_cloud(f'{RESULT_PATH}/source.ply', source_temp)
     open3d.io.write_point_cloud(f'{RESULT_PATH}/target.ply', target_temp)
     # open3d.visualization.draw([source_temp, target_temp])
-    vis.create_window()
-    vis.add_geometry(source_temp)
-    vis.add_geometry(target_temp)
-    vis.run()
-    vis.destroy_window()
+    if isDisplay:
+        vis.create_window()
+        vis.add_geometry(source_temp)
+        vis.add_geometry(target_temp)
+        vis.run()
+        vis.destroy_window()
 
 
     g_est = copy.deepcopy(transformation)
@@ -190,13 +195,15 @@ def draw_registration_result(source, target, transformation):
     print(f'Transformation Estimated:\n{g_est}\n',file=metric_output)
 
     trace1 = g_gt[:3,:3].trace()
-    cos_theta1 = (trace1 - 1) / 2
-    cos_theta1 = torch.clamp(cos_theta1, -1.0, 1.0)
+    np_val1 = (trace1 -1) / 2
+    cos_theta1 = torch.tensor(np_val1, dtype=torch.float32)
+    cos_theta1 = cos_theta1.detach().clone().clamp(-1.0, 1.0)
     angle1 = torch.acos(cos_theta1)
 
     trace2 = g_est[:3,:3].trace()
-    cos_theta2 = (trace2 - 1) / 2
-    cos_theta2 = torch.clamp(cos_theta2, -1.0, 1.0)
+    np_val2 = (trace2 -1) / 2
+    cos_theta2 = torch.tensor(np_val2, dtype=torch.float32)
+    cos_theta2 = cos_theta2.detach().clone().clamp(-1.0, 1.0)
     angle2 = torch.acos(cos_theta2)
 
     print(f'Rotational Error:\n{torch.norm(angle1-angle2)}\n',file=metric_output)
@@ -236,7 +243,7 @@ class Demo:
                      
             return g_hat
 
-def main(p0, p1, p0_pcd, p1_pcd):
+def main(p0, p1, p0_pcd, p1_pcd, isDisplay):
     """ Runs the main program """
 
     fmr = Demo()
@@ -253,12 +260,12 @@ def main(p0, p1, p0_pcd, p1_pcd):
     print(f"Time:\n{((time_end-time_start).microseconds)} microseconds\n", file=metric_output)
 
 
-    draw_registration_result(p1_pcd, p0_pcd, t_est)
+    draw_registration_result(p1_pcd, p0_pcd, t_est, isDisplay)
 
 if __name__ == '__main__':
 
     initialize()
-    p0_src, p1_src = handle_args()
+    p0_src, p1_src, isDisplay = handle_args()
 
     downpcd0 = p0_src.voxel_down_sample(voxel_size=0.05)
     p0_main = np.asarray(downpcd0.points)
@@ -278,7 +285,7 @@ if __name__ == '__main__':
     downpcd1 = p1_src.voxel_down_sample(voxel_size=0.05)
     p1_main = np.asarray(downpcd1.points)
     p1_main = np.expand_dims(p1_main, 0)
-    main(p0_main, p1_main, downpcd0, downpcd1)
+    main(p0_main, p1_main, downpcd0, downpcd1,isDisplay)
 
     os.replace(metric_output.name, f'{RESULT_PATH}/{time_str}/metrics.txt')
     metric_output.close()
