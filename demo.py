@@ -162,6 +162,13 @@ def draw_registration_result(source, target, transformation, isDisplay):
     source_temp = copy.deepcopy(source)
     target_temp = copy.deepcopy(target)
 
+    if isDisplay:
+        vis.create_window()
+        vis.add_geometry(source_temp)
+        vis.run()
+        vis.destroy_window()
+
+
     source_temp.paint_uniform_color([1, 0.706, 0])
     target_temp.paint_uniform_color([0, 0.651, 0.929])
     # open3d.io.write_point_cloud("source_pre.ply", source_temp)
@@ -189,7 +196,6 @@ def draw_registration_result(source, target, transformation, isDisplay):
 
 
     g_est = copy.deepcopy(transformation)
-    g_est[:3,3] = torch.tensor(target_temp.get_center())
 
     print(f'Transformation Ground truth:\n{g_gt}\n',file=metric_output)
     print(f'Transformation Estimated:\n{g_est}\n',file=metric_output)
